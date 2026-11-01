@@ -1,9 +1,9 @@
 """
 NOVARA BLOCKCHAIN
 Module: Mempool
-Version: 0.1.0
+Version: 0.2.0
 
-Manages pending transactions before block confirmation.
+Manages and validates pending transactions.
 """
 
 from transactions import Transaction
@@ -19,7 +19,7 @@ class NovaraMempool:
         if not isinstance(transaction, Transaction):
             return False
 
-        if not transaction.validate():
+        if not transaction.verify_integrity():
             return False
 
         transaction_id = transaction.transaction_id
@@ -33,6 +33,7 @@ class NovaraMempool:
         return True
 
     def get_pending_transactions(self):
+
         return [
             transaction.to_dict()
             for transaction in self.pending_transactions
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     result = mempool.add_transaction(transaction)
 
     print("================================")
-    print("       NOVARA MEMPOOL")
+    print("       NOVARA MEMPOOL 0.2.0")
     print("================================")
 
     print("Transaction Accepted:", result)
