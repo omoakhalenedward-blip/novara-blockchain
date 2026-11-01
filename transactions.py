@@ -1,15 +1,19 @@
 """
 NOVARA BLOCKCHAIN
 Module: Transaction Engine
-Version: 0.2.0
+Version: 0.9.0
 
-Creates, validates and verifies NOVARA transactions.
+Cryptographically signed transactions.
 """
 
 import hashlib
 import json
 import time
 import math
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PublicKey
+)
 
 
 class Transaction:
@@ -21,24 +25,68 @@ class Transaction:
         self.amount = amount
         self.timestamp = time.time()
 
+        self.public_key = None
+        self.signature = None
+
         self.transaction_id = self.generate_id()
 
-    def generate_id(self):
+    def transaction_data(self):
 
-        transaction_data = {
+        return {
             "sender": self.sender,
             "receiver": self.receiver,
             "amount": self.amount,
             "timestamp": self.timestamp
         }
 
-        encoded_data = json.dumps(
-            transaction_data,
+    def generate_id(self):
+
+        encoded = json.dumps(
+            self.transaction_data(),
             sort_keys=True,
             separators=(",", ":")
         ).encode()
 
-        return hashlib.sha256(encoded_data).hexdigest()
+        return hashlib.sha256(encoded).hexdigest()
+
+    def sign_transaction(self, wallet):
+
+        if wallet.address != self.sender:
+            raise ValueError("Wallet does not own sender address.")
+
+        self.public_key = wallet.public_key_bytes.hex()
+
+        self.transaction_id = self.generate_id()
+
+        self.signature = wallet.sign_message(
+            self.transaction_id.encode()
+        ).hex()
+
+        return self.signature
+
+    def verify_signature(self):
+
+        try:
+
+            if not self.public_key or not self.signature:
+                return False
+
+            public_key_bytes = bytes.fromhex(self.public_key)
+            signature_bytes = bytes.fromhex(self.signature)
+
+            public_key = Ed25519PublicKey.from_public_bytes(
+                public_key_bytes
+            )
+
+            public_key.verify(
+                signature_bytes,
+                self.transaction_id.encode()
+            )
+
+            return True
+
+        except Exception:
+            return False
 
     def validate(self):
 
@@ -73,29 +121,10 @@ class Transaction:
         return (
             self.validate()
             and self.transaction_id == self.generate_id()
+            and self.verify_signature()
         )
 
     def to_dict(self):
 
         return {
-            "transaction_id": self.transaction_id,
-            "sender": self.sender,
-            "receiver": self.receiver,
-            "amount": self.amount,
-            "timestamp": self.timestamp
-        }
-
-
-if __name__ == "__main__":
-
-    transaction = Transaction(
-        "NOVARA_WALLET_A",
-        "NOVARA_WALLET_B",
-        10
-    )
-
-    print("NOVARA TRANSACTION ENGINE")
-    print("=========================")
-    print("Transaction:", transaction.to_dict())
-    print("Valid:", transaction.validate())
-    print("Integrity:", transaction.verify_integrity())
+            "
