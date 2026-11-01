@@ -1,9 +1,9 @@
 """
 NOVARA BLOCKCHAIN
-Version: 0.2.0
+Version: 0.3.0
 Project: NOVARA
 
-Enhanced blockchain integrity and security.
+Persistent blockchain storage.
 """
 
 import hashlib
@@ -58,41 +58,72 @@ class NovaraBlockchain:
         if not self.chain:
             return False
 
-        for i, block in enumerate(self.chain):
+        required_fields = {
+            "index",
+            "timestamp",
+            "data",
+            "previous_hash",
+            "hash"
+        }
 
-            required_fields = {
-                "index",
-                "timestamp",
-                "data",
-                "previous_hash",
-                "hash"
-            }
+        try:
+            for i, block in enumerate(self.chain):
 
-            if not isinstance(block, dict):
-                return False
-
-            if not required_fields.issubset(block.keys()):
-                return False
-
-            if block["index"] != i + 1:
-                return False
-
-            if block["hash"] != self.calculate_hash(block):
-                return False
-
-            if i == 0:
-
-                if block["previous_hash"] != "0":
+                if not isinstance(block, dict):
                     return False
 
-            else:
-
-                previous_block = self.chain[i - 1]
-
-                if block["previous_hash"] != previous_block["hash"]:
+                if not required_fields.issubset(block.keys()):
                     return False
 
-        return True
+                if block["index"] != i + 1:
+                    return False
+
+                if not isinstance(block["timestamp"], (int, float)):
+                    return False
+
+                if block["hash"] != self.calculate_hash(block):
+                    return False
+
+                if i == 0:
+                    if block["previous_hash"] != "0":
+                        return False
+                else:
+                    if block["previous_hash"] != self.chain[i - 1]["hash"]:
+                        return False
+
+            return True
+
+        except (TypeError, ValueError, KeyError):
+            return False
+
+    def save_chain(self, filename="novara_chain.json"):
+
+        if not self.verify_chain():
+            raise ValueError("Cannot save an invalid blockchain.")
+
+        with open(filename, "w") as file:
+            json.dump(self.chain, file, indent=4)
+
+        print("NOVARA blockchain saved successfully.")
+
+    def load_chain(self, filename="novara_chain.json"):
+
+        with open(filename, "r") as file:
+            loaded_chain = json.load(file)
+
+        if not isinstance(loaded_chain, list):
+            return False
+
+        original_chain = self.chain
+        self.chain = loaded_chain
+
+        if self.verify_chain():
+            print("NOVARA blockchain loaded successfully.")
+            return True
+
+        self.chain = original_chain
+        print("Invalid blockchain file.")
+        return False
 
 
 if __name__ == "__main__":
@@ -100,10 +131,6 @@ if __name__ == "__main__":
     novara = NovaraBlockchain()
 
     novara.create_block("NOVARA FIRST TEST BLOCK")
-
-    print("\n================================")
-    print("       NOVARA BLOCKCHAIN")
-    print("================================")
 
     print(json.dumps(novara.chain, indent=4))
 
