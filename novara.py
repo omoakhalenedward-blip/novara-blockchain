@@ -36,6 +36,8 @@ class NovaraBlockchain:
 
         self.create_genesis_block()
 
+    # BLOCK HASHING
+
     def calculate_hash(self, block):
 
         contents = {
@@ -52,6 +54,8 @@ class NovaraBlockchain:
 
         return hashlib.sha256(encoded).hexdigest()
 
+    # GENESIS BLOCK
+
     def create_genesis_block(self):
 
         block = {
@@ -67,6 +71,8 @@ class NovaraBlockchain:
         self.chain.append(block)
 
         return block
+
+    # TRANSACTION VERIFICATION
 
     def verify_transaction(self, transaction_data):
 
@@ -103,31 +109,43 @@ class NovaraBlockchain:
 
         except Exception:
             return False
-         def 
-            _rebuild_balances(self):
 
-        if not self.chain:
-            return None
+    # BALANCE RECONSTRUCTION
 
-        genesis = self.chain[0]
-        allocations = genesis.get("genesis_allocations")
+    def _rebuild_balances(self):
 
-        if not isinstance(allocations, dict) or not allocations:
-            return None
+        try:
 
-        ledger = NovaraBalances()
+            if not self.chain:
+                return None
 
-        if not ledger.initialize_genesis(allocations):
-            return None
+            genesis = self.chain[0]
+            allocations = genesis.get("genesis_allocations")
 
-        for block in self.chain[1:]:
+            if not isinstance(allocations, dict) or not allocations:
+                return None
 
-            for transaction in block["transactions"]:
+            ledger = NovaraBalances()
 
-                if not ledger.apply_transaction(transaction):
+            if not ledger.initialize_genesis(allocations):
+                return None
+
+            for block in self.chain[1:]:
+
+                if not isinstance(block.get("transactions"), list):
                     return None
 
-        return ledger
+                for transaction in block["transactions"]:
+
+                    if not ledger.apply_transaction(transaction):
+                        return None
+
+            return ledger
+
+        except Exception:
+            return None
+
+    # ADD PENDING TRANSACTION
 
     def add_pending_transaction(self, transaction):
 
@@ -161,6 +179,8 @@ class NovaraBlockchain:
         except Exception:
             return False
 
+    # CREATE BLOCK
+
     def create_block(self, transactions):
 
         if not isinstance(transactions, list) or not transactions:
@@ -188,7 +208,10 @@ class NovaraBlockchain:
         self.chain.append(block)
 
         return block
-            def mine_pending_transactions(self):
+
+    # PROCESS PENDING TRANSACTIONS
+
+    def mine_pending_transactions(self):
 
         pending = self.mempool.get_pending_transactions()
 
@@ -215,6 +238,8 @@ class NovaraBlockchain:
         self.mempool.clear_mempool()
 
         return block
+
+    # VERIFY BLOCKCHAIN
 
     def verify_chain(self):
 
@@ -302,6 +327,8 @@ class NovaraBlockchain:
         except Exception:
             return False
 
+    # SAVE BLOCKCHAIN
+
     def save_chain(self, filename="novara_chain.json"):
 
         if not self.verify_chain():
@@ -312,31 +339,38 @@ class NovaraBlockchain:
 
         print("NOVARA blockchain saved successfully.")
 
+    # LOAD BLOCKCHAIN
+
     def load_chain(self, filename="novara_chain.json"):
 
-        with open(filename, "r") as file:
-            loaded_chain = json.load(file)
+        try:
 
-        if not isinstance(loaded_chain, list):
+            with open(filename, "r") as file:
+                loaded_chain = json.load(file)
+
+            if not isinstance(loaded_chain, list):
+                return False
+
+            original_chain = self.chain
+            self.chain = loaded_chain
+
+            if self.verify_chain():
+
+                self.genesis_allocations = dict(
+                    self.chain[0]["genesis_allocations"]
+                )
+
+                print("NOVARA blockchain loaded successfully.")
+                return True
+
+            self.chain = original_chain
+
+            print("Invalid blockchain file.")
             return False
 
-        original_chain = self.chain
-        self.chain = loaded_chain
-
-        if self.verify_chain():
-
-            self.genesis_allocations = dict(
-                self.chain[0]["genesis_allocations"]
-            )
-
-            print("NOVARA blockchain loaded successfully.")
-            return True
-
-        self.chain = original_chain
-
-        print("Invalid blockchain file.")
-
-        return False
+        except Exception:
+            print("Unable to load blockchain file.")
+            return False
 
 
 if __name__ == "__main__":
