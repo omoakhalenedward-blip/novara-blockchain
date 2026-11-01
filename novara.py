@@ -19,12 +19,14 @@ class NovaraBlockchain:
 
     def __init__(self, genesis_allocations):
 
-        if not isinstance(genesis_allocations, dict) or not genesis_allocations:
-            raise ValueError("Valid genesis allocations are required.")
+        if not isinstance(genesis_allocations, dict):
+            raise ValueError("Genesis allocations must be a dictionary.")
+
+        if not genesis_allocations:
+            raise ValueError("Genesis allocations cannot be empty.")
 
         self.chain = []
         self.mempool = NovaraMempool()
-
         self.genesis_allocations = dict(genesis_allocations)
 
         ledger = NovaraBalances()
@@ -73,99 +75,4 @@ class NovaraBlockchain:
             if not isinstance(transaction_data, dict):
                 return False
 
-            required_fields = {
-                "transaction_id",
-                "sender",
-                "receiver",
-                "amount",
-                "timestamp",
-                "public_key",
-                "signature"
-            }
-
-            if not required_fields.issubset(transaction_data):
-                return False
-
-            transaction = Transaction(
-                transaction_data["sender"],
-                transaction_data["receiver"],
-                transaction_data["amount"]
-            )
-
-            transaction.timestamp = transaction_data["timestamp"]
-            transaction.transaction_id = transaction_data["transaction_id"]
-            transaction.public_key = transaction_data["public_key"]
-            transaction.signature = transaction_data["signature"]
-
-            return transaction.verify_integrity()
-
-        except Exception:
-            return False
-
-    def _rebuild_balances(self):
-
-        if not self.chain:
-            return None
-
-        genesis = self.chain[0]
-
-        allocations = genesis.get("genesis_allocations")
-
-        if not isinstance(allocations, dict) or not allocations:
-            return None
-
-        ledger = NovaraBalances()
-
-        if not ledger.initialize_genesis(allocations):
-            return None
-
-        for block in self.chain[1:]:
-
-            for transaction in block["transactions"]:
-
-                if not ledger.apply_transaction(transaction):
-                    return None
-
-        return ledger
-
-    def add_pending_transaction(self, transaction):
-
-        try:
-
-            if not isinstance(transaction, Transaction):
-                return False
-
-            transaction_data = transaction.to_dict()
-
-            if not self.verify_transaction(transaction_data):
-                return False
-
-            ledger = self._rebuild_balances()
-
-            if ledger is None:
-                return False
-
-            pending = self.mempool.get_pending_transactions()
-
-            for pending_transaction in pending:
-
-                if not ledger.apply_transaction(pending_transaction):
-                    return False
-
-            if not ledger.apply_transaction(transaction_data):
-                return False
-
-            return self.mempool.add_transaction(transaction)
-
-        except Exception:
-            return False
-
-    def create_block(self, transactions):
-
-        if not isinstance(transactions, list) or not transactions:
-            raise ValueError("Block must contain transactions.")
-
-        ledger = self._rebuild_balances()
-
-        if ledger is None:
-            raise ValueError("Cannot
+            required
