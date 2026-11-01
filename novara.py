@@ -1,7 +1,9 @@
 """
 NOVARA BLOCKCHAIN
-Version: 0.1.0
+Version: 0.2.0
 Project: NOVARA
+
+Enhanced blockchain integrity and security.
 """
 
 import hashlib
@@ -16,6 +18,7 @@ class NovaraBlockchain:
         self.create_block("NOVARA GENESIS BLOCK")
 
     def calculate_hash(self, block):
+
         contents = {
             key: value
             for key, value in block.items()
@@ -23,7 +26,9 @@ class NovaraBlockchain:
         }
 
         encoded = json.dumps(
-            contents, sort_keys=True
+            contents,
+            sort_keys=True,
+            separators=(",", ":")
         ).encode()
 
         return hashlib.sha256(encoded).hexdigest()
@@ -50,13 +55,41 @@ class NovaraBlockchain:
 
     def verify_chain(self):
 
+        if not self.chain:
+            return False
+
         for i, block in enumerate(self.chain):
+
+            required_fields = {
+                "index",
+                "timestamp",
+                "data",
+                "previous_hash",
+                "hash"
+            }
+
+            if not isinstance(block, dict):
+                return False
+
+            if not required_fields.issubset(block.keys()):
+                return False
+
+            if block["index"] != i + 1:
+                return False
 
             if block["hash"] != self.calculate_hash(block):
                 return False
 
-            if i > 0:
-                if block["previous_hash"] != self.chain[i-1]["hash"]:
+            if i == 0:
+
+                if block["previous_hash"] != "0":
+                    return False
+
+            else:
+
+                previous_block = self.chain[i - 1]
+
+                if block["previous_hash"] != previous_block["hash"]:
                     return False
 
         return True
