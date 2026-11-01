@@ -1,9 +1,9 @@
 """
 NOVARA BLOCKCHAIN
 Module: Balance Management
-Version: 1.0.0
+Version: 1.1.0
 
-Manages wallet balances and NVR transfers.
+Manages wallet balances, NVR transfers and locked validator stakes.
 """
 
 from decimal import Decimal, InvalidOperation
@@ -23,6 +23,9 @@ class NovaraBalances:
         self.fee_pool = Decimal("0")
         self.processed_transactions = set()
         self.genesis_initialized = False
+
+        # Validator stake tracking
+        self.locked_stakes = {}
 
         self.max_supply = Decimal(
             str(NovaraConfig.MAX_SUPPLY)
@@ -88,13 +91,65 @@ class NovaraBalances:
             Decimal("0")
         )
 
-    def get_total_supply(self):
+    def get_available_balance(self, address):
 
-        return self.total_supply
+        return (
+            self.get_balance(address)
+            - self.get_locked_stake(address)
+        )
 
-    def get_fee_pool(self):
+    def get_locked_stake(self, address):
 
-        return self.fee_pool
+        return self.locked_stakes.get(
+            address,
+            Decimal("0")
+        )
+
+    def lock_stake(self, address, amount):
+
+        if not self.genesis_initialized:
+            return False
+
+        if address not in self.balances:
+            return False
+
+        value = self.to_units(amount)
+
+        if value is None:
+            return False
+
+        if self.get_available_balance(address) < value:
+            return False
+
+        self.locked_stakes[address] = (
+            self.get_locked_stake(address) + value
+        )
+
+        return True
+
+    def unlock_stake(self, address, amount):
+
+        if address not in self.balances:
+            return False
+
+        value = self.to_units(amount)
+
+        if value is None:
+            return False
+
+        current_stake = self.get_locked_stake(address)
+
+        if current_stake < value:
+            return False
+
+        remaining = current_stake - value
+
+        if remaining == 0:
+            self.locked_stakes.pop(address, None)
+        else:
+            self.locked_stakes[address] = remaining
+
+        return True
 
     def apply_transaction(self, transaction_data):
 
@@ -151,19 +206,21 @@ class NovaraBalances:
 
             required_amount = amount + self.transaction_fee
 
-            sender_balance = self.get_balance(sender)
+            # Locked stake cannot be spent.
+            available_balance = self.get_available_balance(sender)
 
-            if sender_balance < required_amount:
+            if available_balance < required_amount:
                 return False
 
             receiver_balance = self.get_balance(receiver)
 
-            # Check all values before updating balances.
-            new_sender_balance = sender_balance - required_amount
+            new_sender_balance = (
+                self.get_balance(sender) - required_amount
+            )
+
             new_receiver_balance = receiver_balance + amount
             new_fee_pool = self.fee_pool + self.transaction_fee
 
-            # Apply the transfer.
             self.balances[sender] = new_sender_balance
             self.balances[receiver] = new_receiver_balance
             self.fee_pool = new_fee_pool
@@ -174,6 +231,14 @@ class NovaraBalances:
 
         except Exception:
             return False
+
+    def get_total_supply(self):
+
+        return self.total_supply
+
+    def get_fee_pool(self):
+
+        return self.fee_pool
 
     def get_wallet_count(self):
 
@@ -190,7 +255,7 @@ if __name__ == "__main__":
 
     print("================================")
     print("   NOVARA BALANCE ENGINE")
-    print("   Version: 1.0.0")
+    print("   Version: 1.1.0")
     print("================================")
 
     print("Maximum Supply:", balances.max_supply, "NVR")
