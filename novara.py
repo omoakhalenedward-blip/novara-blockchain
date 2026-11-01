@@ -1,9 +1,8 @@
 """
 NOVARA BLOCKCHAIN
-Version: 0.3.0
-Project: NOVARA
+Version: 0.5.0
 
-Persistent blockchain storage.
+Transaction-to-block integration.
 """
 
 import hashlib
@@ -15,7 +14,7 @@ class NovaraBlockchain:
 
     def __init__(self):
         self.chain = []
-        self.create_block("NOVARA GENESIS BLOCK")
+        self.create_block([])
 
     def calculate_hash(self, block):
 
@@ -33,7 +32,7 @@ class NovaraBlockchain:
 
         return hashlib.sha256(encoded).hexdigest()
 
-    def create_block(self, data):
+    def create_block(self, transactions):
 
         previous_hash = (
             self.chain[-1]["hash"]
@@ -43,7 +42,7 @@ class NovaraBlockchain:
         block = {
             "index": len(self.chain) + 1,
             "timestamp": time.time(),
-            "data": data,
+            "transactions": transactions,
             "previous_hash": previous_hash
         }
 
@@ -53,6 +52,13 @@ class NovaraBlockchain:
 
         return block
 
+    def add_transaction(self, transaction):
+
+        if not transaction.verify_integrity():
+            raise ValueError("Invalid transaction.")
+
+        return self.create_block([transaction.to_dict()])
+
     def verify_chain(self):
 
         if not self.chain:
@@ -61,7 +67,7 @@ class NovaraBlockchain:
         required_fields = {
             "index",
             "timestamp",
-            "data",
+            "transactions",
             "previous_hash",
             "hash"
         }
@@ -79,6 +85,9 @@ class NovaraBlockchain:
                     return False
 
                 if not isinstance(block["timestamp"], (int, float)):
+                    return False
+
+                if not isinstance(block["transactions"], list):
                     return False
 
                 if block["hash"] != self.calculate_hash(block):
@@ -99,7 +108,7 @@ class NovaraBlockchain:
     def save_chain(self, filename="novara_chain.json"):
 
         if not self.verify_chain():
-            raise ValueError("Cannot save an invalid blockchain.")
+            raise ValueError("Cannot save invalid blockchain.")
 
         with open(filename, "w") as file:
             json.dump(self.chain, file, indent=4)
@@ -130,8 +139,5 @@ if __name__ == "__main__":
 
     novara = NovaraBlockchain()
 
-    novara.create_block("NOVARA FIRST TEST BLOCK")
-
-    print(json.dumps(novara.chain, indent=4))
-
-    print("\nBlockchain valid:", novara.verify_chain())
+    print("NOVARA BLOCKCHAIN 0.5.0")
+    print("Blockchain valid:", novara.verify_chain())
