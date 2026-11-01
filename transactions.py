@@ -1,9 +1,9 @@
 """
 NOVARA BLOCKCHAIN
 Module: Transaction Engine
-Version: 0.9.0
+Version: 1.0.0
 
-Cryptographically signed transactions.
+Creates, signs, validates and verifies NOVARA transactions.
 """
 
 import hashlib
@@ -52,7 +52,9 @@ class Transaction:
     def sign_transaction(self, wallet):
 
         if wallet.address != self.sender:
-            raise ValueError("Wallet does not own sender address.")
+            raise ValueError(
+                "Wallet does not own sender address."
+            )
 
         self.public_key = wallet.public_key_bytes.hex()
 
@@ -73,6 +75,17 @@ class Transaction:
 
             public_key_bytes = bytes.fromhex(self.public_key)
             signature_bytes = bytes.fromhex(self.signature)
+
+            # Recalculate the sender address from the public key.
+            expected_address = (
+                "NVR"
+                + hashlib.sha256(
+                    public_key_bytes
+                ).hexdigest()[:40].upper()
+            )
+
+            if expected_address != self.sender:
+                return False
 
             public_key = Ed25519PublicKey.from_public_bytes(
                 public_key_bytes
@@ -111,6 +124,9 @@ class Transaction:
         if not math.isfinite(self.amount) or self.amount <= 0:
             return False
 
+        if not isinstance(self.timestamp, (int, float)):
+            return False
+
         if not math.isfinite(self.timestamp):
             return False
 
@@ -124,7 +140,7 @@ class Transaction:
             and self.verify_signature()
         )
 
-        def to_dict(self):
+    def to_dict(self):
 
         return {
             "transaction_id": self.transaction_id,
@@ -140,4 +156,5 @@ class Transaction:
 if __name__ == "__main__":
 
     print("NOVARA SIGNED TRANSACTION ENGINE")
-    print("Version: 0.9.0")
+    print("Version: 1.0.0")
+    print("Status: Development prototype")
