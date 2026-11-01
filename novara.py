@@ -1,19 +1,22 @@
 """
 NOVARA BLOCKCHAIN
-Version: 0.5.0
+Version: 0.7.0
 
-Transaction-to-block integration.
+Blockchain and Mempool Integration.
 """
 
 import hashlib
 import json
 import time
 
+from mempool import NovaraMempool
+
 
 class NovaraBlockchain:
 
     def __init__(self):
         self.chain = []
+        self.mempool = NovaraMempool()
         self.create_block([])
 
     def calculate_hash(self, block):
@@ -52,12 +55,22 @@ class NovaraBlockchain:
 
         return block
 
-    def add_transaction(self, transaction):
+    def add_pending_transaction(self, transaction):
 
-        if not transaction.verify_integrity():
-            raise ValueError("Invalid transaction.")
+        return self.mempool.add_transaction(transaction)
 
-        return self.create_block([transaction.to_dict()])
+    def mine_pending_transactions(self):
+
+        if self.mempool.get_transaction_count() == 0:
+            return None
+
+        transactions = self.mempool.get_pending_transactions()
+
+        block = self.create_block(transactions)
+
+        self.mempool.clear_mempool()
+
+        return block
 
     def verify_chain(self):
 
@@ -139,5 +152,5 @@ if __name__ == "__main__":
 
     novara = NovaraBlockchain()
 
-    print("NOVARA BLOCKCHAIN 0.5.0")
+    print("NOVARA BLOCKCHAIN 0.7.0")
     print("Blockchain valid:", novara.verify_chain())
