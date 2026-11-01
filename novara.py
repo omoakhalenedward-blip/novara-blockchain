@@ -103,7 +103,7 @@ class NovaraBlockchain:
 
         except Exception:
             return False
-            def
+         def 
             _rebuild_balances(self):
 
         if not self.chain:
