@@ -1,14 +1,15 @@
 """
 NOVARA BLOCKCHAIN
 Module: Transaction Engine
-Version: 0.1.0
+Version: 0.2.0
 
-Handles and validates NOVARA transactions.
+Creates, validates and verifies NOVARA transactions.
 """
 
 import hashlib
 import json
 import time
+import math
 
 
 class Transaction:
@@ -33,26 +34,46 @@ class Transaction:
 
         encoded_data = json.dumps(
             transaction_data,
-            sort_keys=True
+            sort_keys=True,
+            separators=(",", ":")
         ).encode()
 
         return hashlib.sha256(encoded_data).hexdigest()
 
     def validate(self):
 
-        if not self.sender or not self.receiver:
+        if not isinstance(self.sender, str):
+            return False
+
+        if not isinstance(self.receiver, str):
+            return False
+
+        if not self.sender.strip() or not self.receiver.strip():
             return False
 
         if self.sender == self.receiver:
             return False
 
+        if isinstance(self.amount, bool):
+            return False
+
         if not isinstance(self.amount, (int, float)):
             return False
 
-        if self.amount <= 0:
+        if not math.isfinite(self.amount) or self.amount <= 0:
+            return False
+
+        if not math.isfinite(self.timestamp):
             return False
 
         return True
+
+    def verify_integrity(self):
+
+        return (
+            self.validate()
+            and self.transaction_id == self.generate_id()
+        )
 
     def to_dict(self):
 
@@ -77,3 +98,4 @@ if __name__ == "__main__":
     print("=========================")
     print("Transaction:", transaction.to_dict())
     print("Valid:", transaction.validate())
+    print("Integrity:", transaction.verify_integrity())
