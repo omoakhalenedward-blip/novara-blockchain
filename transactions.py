@@ -124,7 +124,20 @@ class Transaction:
             and self.verify_signature()
         )
 
-    def to_dict(self):
+        def to_dict(self):
 
         return {
-            "
+            "transaction_id": self.transaction_id,
+            "sender": self.sender,
+            "receiver": self.receiver,
+            "amount": self.amount,
+            "timestamp": self.timestamp,
+            "public_key": self.public_key,
+            "signature": self.signature
+        }
+
+
+if __name__ == "__main__":
+
+    print("NOVARA SIGNED TRANSACTION ENGINE")
+    print("Version: 0.9.0")
